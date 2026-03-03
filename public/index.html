@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebRTC Studio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="landing">
+    <div class="landing-card">
+
+      <div class="landing-logo">
+        <div class="landing-logo-icon">📡</div>
+        <h1>WebRTC Studio</h1>
+        <span class="badge">BETA</span>
+      </div>
+      <p class="landing-subtitle">Živé video přes prohlížeč · nízká latence · bez instalace</p>
+
+      <!-- Vytvoř místnost -->
+      <div class="form-group">
+        <label>Tvoje jméno</label>
+        <input type="text" id="userName" placeholder="Zadej jméno..." maxlength="30" />
+      </div>
+
+      <div class="form-group">
+        <label>Doba platnosti místnosti</label>
+        <div class="form-row" style="gap:8px">
+          <input type="number" id="expiryValue" min="1" max="480" value="1" style="width:80px;text-align:center" />
+          <select id="expiryUnit" style="flex:1;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:#fff;font-size:14px">
+            <option value="hours" selected>hodin</option>
+            <option value="days">dnů</option>
+          </select>
+        </div>
+        <small style="color:rgba(255,255,255,0.35);font-size:11px;margin-top:4px;display:block">Max 20 dnů (480 hodin)</small>
+      </div>
+
+      <button class="btn btn-primary btn-full btn-lg" onclick="createRoom()">
+        ✨ Vytvořit novou místnost
+      </button>
+
+      <div class="divider">nebo připojit se</div>
+
+      <!-- Připoj se ke místnosti -->
+      <div class="form-group">
+        <label>ID místnosti</label>
+        <div class="form-row">
+          <input type="text" id="roomInput" placeholder="Zadej ID místnosti..." maxlength="20" />
+          <button class="btn btn-secondary" onclick="joinRoom()">Připojit</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Načti uloženou hodnotu jména
+    const savedName = localStorage.getItem('webrtc-name');
+    if (savedName) document.getElementById('userName').value = savedName;
+
+    // Zkontroluj URL parametr ?room=...
+    const urlRoom = new URLSearchParams(window.location.search).get('room');
+    if (urlRoom) document.getElementById('roomInput').value = urlRoom;
+
+    function generateRoomId() {
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      let id = '';
+      for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
+      return id;
+    }
+
+    function getName() {
+      const name = document.getElementById('userName').value.trim() || 'Anon';
+      localStorage.setItem('webrtc-name', name);
+      return name;
+    }
+
+    // Clamp expiry to max 20 days
+    function getExpiryMinutes() {
+      const val  = Math.max(1, parseInt(document.getElementById('expiryValue').value) || 1);
+      const unit = document.getElementById('expiryUnit').value;
+      let minutes = unit === 'days' ? val * 24 * 60 : val * 60;
+      const max = 20 * 24 * 60; // 20 days in minutes
+      if (minutes > max) minutes = max;
+      return minutes;
+    }
+
+    // Adjust max on unit change
+    document.getElementById('expiryUnit').addEventListener('change', function() {
+      const inp = document.getElementById('expiryValue');
+      if (this.value === 'days') { inp.max = 20; if (parseInt(inp.value) > 20) inp.value = 20; }
+      else { inp.max = 480; }
+    });
+
+    function createRoom() {
+      const roomId = generateRoomId();
+      const name = getName();
+      const expiry = getExpiryMinutes();
+      window.location.href = `room.html?room=${roomId}&name=${encodeURIComponent(name)}&expiry=${expiry}`;
+    }
+
+    function joinRoom() {
+      const roomId = document.getElementById('roomInput').value.trim();
+      if (!roomId) { alert('Zadej ID místnosti.'); return; }
+      const name = getName();
+      window.location.href = `room.html?room=${roomId}&name=${encodeURIComponent(name)}`;
+    }
+
+    // Enter pro připojení
+    document.getElementById('roomInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinRoom();
+    });
+  </script>
+</body>
+</html>

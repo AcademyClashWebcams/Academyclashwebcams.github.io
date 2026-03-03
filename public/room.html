@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebRTC Studio – Místnost</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- OBS: použij URL s ?obs=1 pro čistý výstup bez ovládání -->
+
+  <div class="room-layout" id="roomLayout">
+
+    <!-- Header -->
+    <div class="room-header">
+      <div class="room-header-left">
+        <div class="room-logo-sm">📡</div>
+        <div class="room-id-badge">
+          Místnost: <strong id="displayRoomId">...</strong>
+        </div>
+      </div>
+      <div class="room-header-right">
+        <div class="peer-count">
+          👥 <span class="count" id="peerCountEl">1</span>
+        </div>
+        <div class="room-expiry" id="roomExpiry" style="display:none;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-size:12px;font-variant-numeric:tabular-nums" title="Zbývající čas místnosti">
+          ⏱ <span id="expiryCountdown">--</span>
+        </div>
+        <button class="btn btn-secondary" style="padding:7px 14px;font-size:13px" onclick="copyRoomLink()">
+          🔗 Sdílet
+        </button>
+        <button class="btn btn-secondary" style="padding:7px 14px;font-size:13px" onclick="window.open('overlay.html?room='+ROOM_ID,'_blank')">
+          🎬 Overlay
+        </button>
+        <button class="btn btn-danger" style="padding:7px 14px;font-size:13px" onclick="leaveRoom()">
+          Odejít
+        </button>
+      </div>
+    </div>
+
+    <!-- Video grid -->
+    <div class="video-grid" id="videoGrid">
+      <!-- Lokální tile se přidá přes JS -->
+    </div>
+
+    <!-- Ovládací panel -->
+    <div class="controls">
+      <div class="controls-center">
+
+        <!-- Mikrofon -->
+        <div class="btn-icon-label">
+          <button class="btn btn-icon" id="btnMic" onclick="toggleMic()" title="Mikrofon">🎤</button>
+          <span id="micLabel">Mikrofon</span>
+        </div>
+
+        <!-- Kamera -->
+        <div class="btn-icon-label">
+          <button class="btn btn-icon" id="btnCam" onclick="toggleCam()" title="Kamera">📷</button>
+          <span id="camLabel">Kamera</span>
+        </div>
+
+        <div class="controls-divider"></div>
+
+        <!-- Screen share -->
+        <div class="btn-icon-label">
+          <button class="btn btn-icon" id="btnScreen" onclick="toggleScreen()" title="Sdílet obrazovku">🖥️</button>
+          <span>Obrazovka</span>
+        </div>
+
+        <div class="controls-divider"></div>
+
+        <!-- Nastavení -->
+        <div class="btn-icon-label">
+          <button class="btn btn-icon" id="btnSettings" onclick="toggleSettings()" title="Nastavení">⚙️</button>
+          <span>Nastavení</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Nastavení panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <h3>
+      Nastavení
+      <button class="btn btn-icon" style="width:28px;height:28px;font-size:14px" onclick="toggleSettings()">✕</button>
+    </h3>
+
+    <div class="settings-section-title">📹 Video</div>
+    <div class="settings-grid">
+      <div class="form-group" style="margin:0">
+        <label>Rozlišení</label>
+        <select id="resolutionSelect" onchange="applyVideoSettings()">
+          <option value="360p">360p</option>
+          <option value="480p">480p</option>
+          <option value="720p" selected>720p HD</option>
+          <option value="1080p">1080p FullHD</option>
+          <option value="1440p">1440p QHD</option>
+          <option value="4k">4K UHD</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Snímky/s (FPS)</label>
+        <select id="fpsSelect" onchange="applyVideoSettings()">
+          <option value="15">15 fps</option>
+          <option value="24">24 fps</option>
+          <option value="30" selected>30 fps</option>
+          <option value="60">60 fps</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0; grid-column: 1/-1;">
+        <label>Max. bitrate videa</label>
+        <select id="bitrateSelect" onchange="applyBitrate()">
+          <option value="0">Auto (neomezeno)</option>
+          <option value="500">500 kbps (mobilní sítě)</option>
+          <option value="1000">1 Mbps (nízká kvalita)</option>
+          <option value="2000" selected>2 Mbps (HD doporučeno)</option>
+          <option value="4000">4 Mbps (1080p)</option>
+          <option value="8000">8 Mbps (1440p / 4K)</option>
+          <option value="15000">15 Mbps (maximání)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0; grid-column: 1/-1;">
+        <label>Kamera</label>
+        <select id="cameraSelect" onchange="changeCamera()">
+          <option value="">-- načítání... --</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0; grid-column: 1/-1;">
+        <label>Mikrofon</label>
+        <select id="micSelect" onchange="changeMic()">
+          <option value="">-- načítání... --</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-section-title">� OBS Browser Source</div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>OBS link (vlož jako Browser Source v OBS)</label>
+      <div class="copy-link-row">
+        <input type="text" id="obsLinkInput" readonly />
+        <button class="btn btn-primary" onclick="copyObsLink()">Kopírovat</button>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:6px">Zobrazí jen čisté video bez UI · průhledné pozadí</p>
+    </div>
+
+    <div class="settings-section-title">�🔗 Sdílení</div>
+    <div class="form-group" style="margin-bottom:8px">
+      <label>Odkaz do místnosti</label>
+      <div class="copy-link-row">
+        <input type="text" id="roomLinkInput" readonly />
+        <button class="btn btn-primary" onclick="copyRoomLink()">Kopírovat</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="room.js"></script>
+</body>
+</html>
